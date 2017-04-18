@@ -5,6 +5,7 @@ import re
 import pickle
 import youtube_dl
 import time
+from threading import Thread
 
 def dump(obj):
     for attr in dir(obj):
@@ -41,13 +42,40 @@ class Playlist:
         self.num+=1
         return self.songs[self.num-1]
 
+    def removeCurrentSong(self):
+        self.songs.remove(self.songs[self.num-1])
+
 class Player:
     voice = None
     player = None
     playlists = None
+    volume = 1
+    autoplay = False
 
     def __init__(self, ps):
         self.playlists = ps
+
+    async def playsong(self, chan):
+        if player.player != None and not player.player.is_done():
+            player.player.stop()
+
+        playlist = self.playlists.getCurrentPlaylist()
+        song = playlist.getNextSong()
+        await client.send_message(chan, "Playing "+song)
+
+
+        if self.autoplay == False:
+            self.player = await self.voice.create_ytdl_player(song)
+            self.player.volume = self.volume
+            self.player.start()
+            return
+
+        self.player = await self.voice.create_ytdl_player(song)
+        self.player.volume = self.volume
+        self.player.start()
+
+        self.player.join()
+        print("test")
 
 class Playlists:
     def __init__(self):
@@ -128,9 +156,6 @@ async def on_message(message):
     elif message.content.startswith('!lists'):
         await client.send_message(message.channel, player.playlists.getPlaylists())
 
-    #elif message.content.startswith('!test'):
-        #dump(playlists.getCurrentPlaylist())
-
     elif message.content.startswith('!songs'):
         if player.playlists.currentPlaylist == None:
             await client.send_message(message.channel, 'No playlist selected')
@@ -139,6 +164,9 @@ async def on_message(message):
         await client.send_message(message.channel, player.playlists.getCurrentPlaylist().getSongs())
 
     elif message.content.startswith('!join'):
+        if player.voice != None:
+            player.voice = None
+
         chan = ""
         for channel in client.get_all_channels():
             if channel.name == "General":
@@ -151,13 +179,8 @@ async def on_message(message):
         if player.voice == None:
             await client.send_message(message.channel, 'Not connected to a voice channel.')
             return
-        if player.player != None and not player.player.is_done():
-            player.player.stop()
-        playlist = player.playlists.getCurrentPlaylist()
-        song = playlist.getNextSong()
-        await client.send_message(message.channel, "Playing "+song)
-        player.player = await player.voice.create_ytdl_player(song)
-        player.player.start()
+
+        await player.playsong(message.channel)
 
     elif message.content.startswith('!volume'):
         if player.player == None:
@@ -184,16 +207,19 @@ async def on_message(message):
 
         player.playlists.addSong(arr[1])
 
+    elif message.content.startswith('!remove'):
+        player.playlists.getCurrentPlaylist().removeCurrentSong()
+
     elif message.content.startswith('!autoplay'):
         if player.player != None and not player.player.is_done():
             player.player.stop()
-        playlist = player.playlists.getCurrentPlaylist()
-        while 1==1:
-            song = playlist.getNextSong()
-            await client.send_message(message.channel, "Playing "+song)
-            player.player = await player.voice.create_ytdl_player(song)
-            player.player.start()
-            time.sleep(player.player.duration)
+
+        player.autoplay = True
+        await player.playsong(message.channel)
+
+    elif message.content.startswith('!stop'):
+        player.autoplay = False
+        player.player.stop()
 
     #change current playlist
     elif message.content.startswith('!ccp'):
@@ -210,5 +236,5 @@ async def on_message(message):
             player.playlists.currentPlaylist = arr[1]
             await client.send_message(message.channel, 'Current playlist: '+player.playlists.currentPlaylist)
 
-with open('password', 'w') as f:
+with open('password', 'r') as f:
     client.run('jfj@hotmail.nl', f.readline())
