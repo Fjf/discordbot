@@ -148,6 +148,9 @@ async def on_message(message):
         player.voice = await client.join_voice_channel(chan)
 
     elif message.content.startswith('!next'):
+        if player.voice == None:
+            await client.send_message(message.channel, 'Not connected to a voice channel.')
+            return
         if player.player != None and not player.player.is_done():
             player.player.stop()
         playlist = player.playlists.getCurrentPlaylist()
@@ -158,13 +161,16 @@ async def on_message(message):
 
     elif message.content.startswith('!volume'):
         if player.player == None:
-            await client.send_message(message.channel, 'Invalid syntax: !volume <0-2>')
+            await client.send_message(message.channel, 'There\'s no music playing.')
             return
         arr = message.content.split()
         if len(arr) != 2:
-            await client.send_message(message.channel, 'Invalid syntax: !addsong <youtube song url>')
+            await client.send_message(message.channel, 'Invalid syntax: !volume <0-2>')
             return
-        player.player.volume = arr[1]
+        try:
+            player.player.volume = float(arr[1])
+        except ValueError:
+            await client.send_message(message.channel, 'You may only enter numerical values.')
 
     elif message.content.startswith('!addsong'):
         if player.playlists.currentPlaylist == None:
@@ -204,4 +210,5 @@ async def on_message(message):
             player.playlists.currentPlaylist = arr[1]
             await client.send_message(message.channel, 'Current playlist: '+player.playlists.currentPlaylist)
 
-client.run('jfj@hotmail.nl', '')
+with open('password', 'w') as f:
+    client.run('jfj@hotmail.nl', f.readline())
