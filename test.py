@@ -4,8 +4,6 @@ import datetime
 import re
 import pickle
 import youtube_dl
-import time
-from threading import Thread
 
 def dump(obj):
     for attr in dir(obj):
@@ -45,6 +43,13 @@ class Playlist:
     def removeCurrentSong(self):
         self.songs.remove(self.songs[self.num-1])
 
+'''
+   Player class contains the voice connection and ytdl player.
+   Playlists is a list of playlist classes
+   Autoplay will automatically play new songs if the old one is done when turned on
+   Enqueueing a song will play the song after the current song is done playing,
+    clearing the queue as quick as possible
+'''
 class Player:
     voice = None
     player = None
@@ -54,28 +59,40 @@ class Player:
 
     def __init__(self, ps):
         self.playlists = ps
+        self.queue = []
+
+    def enqueue(self, song):
+        self.queue.append(song)
+
+    def dequeue(self, song):
+        if len(self.queue) == 0:
+            return ""
+
+        song = self.queue[0]
+        self.queue.remove(song)
+        return song
 
     async def playsong(self, chan):
-        if player.player != None and not player.player.is_done():
-            player.player.stop()
+        while True:
+            if player.player != None and not player.player.is_done():
+                player.player.stop()
 
-        playlist = self.playlists.getCurrentPlaylist()
-        song = playlist.getNextSong()
-        await client.send_message(chan, "Playing "+song)
+            if len(self.queue) == 0:
+                playlist = self.playlists.getCurrentPlaylist()
+                song = playlist.getNextSong()
+            else:
+                song = self.dequeue()
 
+            await client.send_message(chan, "Now playing "+song)
 
-        if self.autoplay == False:
             self.player = await self.voice.create_ytdl_player(song)
             self.player.volume = self.volume
             self.player.start()
-            return
 
-        self.player = await self.voice.create_ytdl_player(song)
-        self.player.volume = self.volume
-        self.player.start()
+            await asyncio.sleep(self.player.duration)
 
-        self.player.join()
-        print("test")
+            if self.autoplay == False:
+                break
 
 class Playlists:
     def __init__(self):
@@ -136,15 +153,24 @@ async def updatePlaylist(message):
         for link in re.findall('^((?:https?:)?\/\/)?((?:www|m)\.)?((?:youtube\.com|youtu.be))(\/(?:[\w\-]+\?v=|embed\/|v\/)?)([\w\-]+)(\S+)?$', log.content):
             player.playlists.currentPlaylist.addSong(''.join(link) + "\n")
 
-def removeDuplicates():
-    arr = []
-    with open('playlist', 'r') as f:
-        line = f.readline()
-        if line not in arr:
-            arr.append(line)
-    with open('playlist', 'w') as f:
-        for e in arr:
-            f.write(e + "\n")
+async def join_user_channel(msgchannel, user):
+    if player.voice != None:
+        player.voice = None
+
+    chan = ""
+    for channel in client.get_all_channels():
+        for member in channel.voice_members:
+            if member == user:
+                chan = channel
+                break
+        if chan != "":
+            break
+
+    if chan == "":
+        await client.send_message(msgchannel, "Unable to join your voicechannel")
+        return
+
+    player.voice = await client.join_voice_channel(chan)
 
 @client.event
 async def on_message(message):
@@ -163,17 +189,14 @@ async def on_message(message):
 
         await client.send_message(message.channel, player.playlists.getCurrentPlaylist().getSongs())
 
+    elif message.content.startswith('!pause'):
+        print("TODO: Pausing")
+
+    elif message.content.startswith('!unpause'):
+        print("TODO: Unpausing")
+
     elif message.content.startswith('!join'):
-        if player.voice != None:
-            player.voice = None
-
-        chan = ""
-        for channel in client.get_all_channels():
-            if channel.name == "General":
-                chan = channel
-                break
-
-        player.voice = await client.join_voice_channel(chan)
+        join_user_channel(message.channel, message.author)
 
     elif message.content.startswith('!next'):
         if player.voice == None:
@@ -183,15 +206,14 @@ async def on_message(message):
         await player.playsong(message.channel)
 
     elif message.content.startswith('!volume'):
-        if player.player == None:
-            await client.send_message(message.channel, 'There\'s no music playing.')
-            return
         arr = message.content.split()
         if len(arr) != 2:
             await client.send_message(message.channel, 'Invalid syntax: !volume <0-2>')
             return
         try:
-            player.player.volume = float(arr[1])
+            player.volume = float(arr[1])
+            if player.player != None:
+                player.player.volume = player.volume
         except ValueError:
             await client.send_message(message.channel, 'You may only enter numerical values.')
 
