@@ -121,3 +121,10 @@ class Playlists:
         playlist = self.findPlaylist(self.currentPlaylist)
         if playlist != None:
             playlist.addSong(song)
+
+    def addPersonalSong(self, song, name):
+        playlist = self.findPlaylist(name)
+        if playlist == None:
+            self.addPlaylist(name)
+        playlist = self.findPlaylist(name)
+        playlist.addSong(song)
