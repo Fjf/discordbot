@@ -62,17 +62,11 @@ class Player:
         self.queue = []
 
     def enqueue(self, song):
-<<<<<<< HEAD
         for link in re.findall('^((?:https?:)?\/\/)?((?:www|m)\.)?((?:youtube\.com|youtu.be))(\/(?:[\w\-]+\?v=|embed\/|v\/)?)([\w\-]+)(\S+)?$', song):
             strLink = ''.join(link)
             self.queue.append(strLink)
 
     def dequeue(self):
-=======
-        self.queue.append(song)
-
-    def dequeue(self, song):
->>>>>>> 018eed4a831ac1814541251632cced68bd1a06cc
         if len(self.queue) == 0:
             return ""
 
@@ -91,36 +85,18 @@ class Player:
             else:
                 song = self.dequeue()
 
-<<<<<<< HEAD
             self.player = await self.voice.create_ytdl_player(song)
             self.player.volume = self.volume
-
             await client.send_message(chan, "Now playing: "+self.player.title)
             self.player.start()
-
-            #hoi
-            print("test")
 
             await asyncio.sleep(self.player.duration)
             while not self.player.is_done():
                 await asyncio.sleep(2)
-=======
-            await client.send_message(chan, "Now playing "+song)
-
-            self.player = await self.voice.create_ytdl_player(song)
-            self.player.volume = self.volume
-            self.player.start()
-
-            await asyncio.sleep(self.player.duration)
->>>>>>> 018eed4a831ac1814541251632cced68bd1a06cc
 
             if self.autoplay == False:
                 break
 
-<<<<<<< HEAD
-
-=======
->>>>>>> 018eed4a831ac1814541251632cced68bd1a06cc
 class Playlists:
     def __init__(self):
         self.currentPlaylist = None
@@ -217,7 +193,6 @@ async def on_message(message):
         await client.send_message(message.channel, player.playlists.getCurrentPlaylist().getSongs())
 
     elif message.content.startswith('!pause'):
-<<<<<<< HEAD
         player.player.pause()
 
     elif message.content.startswith('!unpause'):
@@ -232,15 +207,6 @@ async def on_message(message):
 
     elif message.content.startswith('!join'):
         await join_user_channel(message.channel, message.author)
-=======
-        print("TODO: Pausing")
-
-    elif message.content.startswith('!unpause'):
-        print("TODO: Unpausing")
-
-    elif message.content.startswith('!join'):
-        join_user_channel(message.channel, message.author)
->>>>>>> 018eed4a831ac1814541251632cced68bd1a06cc
 
     elif message.content.startswith('!next'):
         if player.voice == None:
@@ -303,8 +269,4 @@ async def on_message(message):
             await client.send_message(message.channel, 'Current playlist: '+player.playlists.currentPlaylist)
 
 with open('password', 'r') as f:
-<<<<<<< HEAD
     client.run(f.readline().strip(), f.readline().strip())
-=======
-    client.run(f.readline(), f.readline())
->>>>>>> 018eed4a831ac1814541251632cced68bd1a06cc
