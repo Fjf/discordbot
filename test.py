@@ -62,9 +62,11 @@ class Player:
         self.queue = []
 
     def enqueue(self, song):
-        self.queue.append(song)
+        for link in re.findall('^((?:https?:)?\/\/)?((?:www|m)\.)?((?:youtube\.com|youtu.be))(\/(?:[\w\-]+\?v=|embed\/|v\/)?)([\w\-]+)(\S+)?$', song):
+            strLink = ''.join(link)
+            self.queue.append(strLink)
 
-    def dequeue(self, song):
+    def dequeue(self):
         if len(self.queue) == 0:
             return ""
 
@@ -83,16 +85,22 @@ class Player:
             else:
                 song = self.dequeue()
 
-            await client.send_message(chan, "Now playing "+song)
-
             self.player = await self.voice.create_ytdl_player(song)
             self.player.volume = self.volume
+
+            await client.send_message(chan, "Now playing: "+self.player.title)
             self.player.start()
 
+            #hoi
+            print("test")
+
             await asyncio.sleep(self.player.duration)
+            while not self.player.is_done():
+                await asyncio.sleep(2)
 
             if self.autoplay == False:
                 break
+
 
 class Playlists:
     def __init__(self):
@@ -190,13 +198,20 @@ async def on_message(message):
         await client.send_message(message.channel, player.playlists.getCurrentPlaylist().getSongs())
 
     elif message.content.startswith('!pause'):
-        print("TODO: Pausing")
+        player.player.pause()
 
     elif message.content.startswith('!unpause'):
-        print("TODO: Unpausing")
+        player.player.resume()
+
+    elif message.content.startswith('!queue'):
+        arr = message.content.split()
+        if len(arr) != 2:
+            await client.send_message(message.channel, 'Invalid syntax: !enqueue <yt-url>')
+            return
+        player.enqueue(arr[1])
 
     elif message.content.startswith('!join'):
-        join_user_channel(message.channel, message.author)
+        await join_user_channel(message.channel, message.author)
 
     elif message.content.startswith('!next'):
         if player.voice == None:
@@ -259,4 +274,4 @@ async def on_message(message):
             await client.send_message(message.channel, 'Current playlist: '+player.playlists.currentPlaylist)
 
 with open('password', 'r') as f:
-    client.run('jfj@hotmail.nl', f.readline())
+    client.run(f.readline().strip(), f.readline().strip())
